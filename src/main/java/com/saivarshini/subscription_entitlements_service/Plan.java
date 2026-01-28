@@ -13,6 +13,7 @@ public class Plan {
   private int monthlyPriceCents;
   private int maxProjects;
   private boolean analyticsEnabled;
+  private int maxSeats;
 
   public Long getId() { return id; }
   public String getCode() { return code; }
@@ -20,10 +21,12 @@ public class Plan {
   public int getMonthlyPriceCents() { return monthlyPriceCents; }
   public int getMaxProjects() { return maxProjects; }
   public boolean isAnalyticsEnabled() { return analyticsEnabled; }
+  public int getMaxSeats() { return maxSeats; }
 
   public void setCode(String code) { this.code = code; }
   public void setName(String name) { this.name = name; }
   public void setMonthlyPriceCents(int monthlyPriceCents) { this.monthlyPriceCents = monthlyPriceCents; }
   public void setMaxProjects(int maxProjects) { this.maxProjects = maxProjects; }
   public void setAnalyticsEnabled(boolean analyticsEnabled) { this.analyticsEnabled = analyticsEnabled; }
+  public void setMaxSeats(int maxSeats) { this.maxSeats = maxSeats; }
 }
