@@ -7,4 +7,5 @@ import java.util.List;
 public interface MemberRepository extends JpaRepository<Member, Long> {
   long countByWorkspaceId(String workspaceId);
   List<Member> findByWorkspaceId(String workspaceId);
+  boolean existsByWorkspaceIdAndEmail(String workspaceId, String email);
 }

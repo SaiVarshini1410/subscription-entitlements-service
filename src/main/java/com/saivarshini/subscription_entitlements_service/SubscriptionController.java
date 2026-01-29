@@ -10,10 +10,17 @@ public class SubscriptionController {
 
   private final SubscriptionRepository subRepo;
   private final PlanRepository planRepo;
+  private final MemberRepository memberRepo;
+  private final NotificationRepository notificationRepo;
 
-  public SubscriptionController(SubscriptionRepository subRepo, PlanRepository planRepo) {
+  public SubscriptionController(SubscriptionRepository subRepo,
+                                PlanRepository planRepo,
+                                MemberRepository memberRepo,
+                                NotificationRepository notificationRepo) {
     this.subRepo = subRepo;
     this.planRepo = planRepo;
+    this.memberRepo = memberRepo;
+    this.notificationRepo = notificationRepo;
   }
 
   @PostMapping
@@ -41,13 +48,15 @@ public class SubscriptionController {
   @GetMapping("/{workspaceId}")
   public Subscription getByWorkspace(@PathVariable String workspaceId) {
     return subRepo.findByWorkspaceId(workspaceId)
-        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "No subscription for workspaceId: " + workspaceId));
+        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+            "No subscription for workspaceId: " + workspaceId));
   }
 
   @PostMapping("/{workspaceId}/cancel")
   public Subscription cancel(@PathVariable String workspaceId) {
     Subscription sub = subRepo.findByWorkspaceId(workspaceId)
-        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "No subscription for workspaceId: " + workspaceId));
+        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+            "No subscription for workspaceId: " + workspaceId));
 
     sub.setStatus("CANCELED");
     return subRepo.save(sub);
@@ -71,7 +80,22 @@ public class SubscriptionController {
         .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST,
             "Unknown planCode: " + newPlanCode));
 
+    String oldPlanCode = sub.getPlanCode();
     sub.setPlanCode(newPlanCode);
-    return subRepo.save(sub);
+
+    Subscription saved = subRepo.save(sub);
+
+    String msg = "Workspace plan changed from " + oldPlanCode + " to " + newPlanCode;
+
+    for (Member m : memberRepo.findByWorkspaceId(workspaceId)) {
+      Notification n = new Notification();
+      n.setWorkspaceId(workspaceId);
+      n.setEmail(m.getEmail());
+      n.setType("SUBSCRIPTION_CHANGED");
+      n.setMessage(msg);
+      notificationRepo.save(n);
+    }
+
+    return saved;
   }
 }
