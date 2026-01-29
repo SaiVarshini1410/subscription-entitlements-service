@@ -52,4 +52,26 @@ public class SubscriptionController {
     sub.setStatus("CANCELED");
     return subRepo.save(sub);
   }
+
+  @PostMapping("/{workspaceId}/change-plan")
+  public Subscription changePlan(@PathVariable String workspaceId,
+                                 @RequestBody ChangePlanRequest req) {
+
+    if (req == null || req.getPlanCode() == null || req.getPlanCode().trim().isEmpty()) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "planCode is required");
+    }
+
+    Subscription sub = subRepo.findByWorkspaceId(workspaceId)
+        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+            "No subscription for workspaceId: " + workspaceId));
+
+    String newPlanCode = req.getPlanCode().trim().toUpperCase();
+
+    planRepo.findByCode(newPlanCode)
+        .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST,
+            "Unknown planCode: " + newPlanCode));
+
+    sub.setPlanCode(newPlanCode);
+    return subRepo.save(sub);
+  }
 }
