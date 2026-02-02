@@ -16,19 +16,23 @@ public class InviteController {
   private final MemberRepository memberRepo;
   private final SubscriptionRepository subRepo;
   private final PlanRepository planRepo;
+  private final AuditService audit;
 
   public InviteController(InviteRepository inviteRepo,
                           MemberRepository memberRepo,
                           SubscriptionRepository subRepo,
-                          PlanRepository planRepo) {
+                          PlanRepository planRepo,
+                          AuditService audit) {
     this.inviteRepo = inviteRepo;
     this.memberRepo = memberRepo;
     this.subRepo = subRepo;
     this.planRepo = planRepo;
+    this.audit = audit;
   }
 
   @PostMapping("/workspaces/{workspaceId}/invites")
-  public InviteResponse createInvite(@PathVariable String workspaceId,
+  public InviteResponse createInvite(@RequestHeader(value = "X-Actor-Email", required = false) String actorEmail,
+                                     @PathVariable String workspaceId,
                                      @RequestBody InviteCreateRequest req) {
     if (req == null || req.getEmail() == null || req.getEmail().trim().isEmpty()) {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "email is required");
@@ -56,6 +60,9 @@ public class InviteController {
     inv.setExpiresAt(Instant.now().plus(7, ChronoUnit.DAYS));
 
     inv = inviteRepo.save(inv);
+
+    audit.log(workspaceId, actorEmail, "INVITE_CREATED",
+        "inviteId=" + inv.getId() + ", email=" + email);
 
     String link = "http://localhost:8080/invites/" + inv.getToken() + "/accept";
     System.out.println("INVITE LINK (simulate email): " + link);
@@ -113,6 +120,10 @@ public class InviteController {
 
     inv.setStatus("ACCEPTED");
     inviteRepo.save(inv);
+
+    // actor is the invitee in this flow (since no auth)
+    audit.log(workspaceId, email, "INVITE_ACCEPTED",
+        "inviteId=" + inv.getId() + ", memberId=" + saved.getId());
 
     return saved;
   }

@@ -12,17 +12,21 @@ public class MemberController {
   private final MemberRepository memberRepo;
   private final SubscriptionRepository subRepo;
   private final PlanRepository planRepo;
+  private final AuditService audit;
 
   public MemberController(MemberRepository memberRepo,
                           SubscriptionRepository subRepo,
-                          PlanRepository planRepo) {
+                          PlanRepository planRepo,
+                          AuditService audit) {
     this.memberRepo = memberRepo;
     this.subRepo = subRepo;
     this.planRepo = planRepo;
+    this.audit = audit;
   }
 
   @PostMapping("/workspaces/{workspaceId}/members")
-  public Member addMember(@PathVariable String workspaceId,
+  public Member addMember(@RequestHeader(value = "X-Actor-Email", required = false) String actorEmail,
+                          @PathVariable String workspaceId,
                           @RequestBody MemberCreateRequest req) {
 
     if (req == null || req.getEmail() == null || req.getEmail().trim().isEmpty()) {
@@ -50,8 +54,13 @@ public class MemberController {
 
     Member m = new Member();
     m.setWorkspaceId(workspaceId);
-    m.setEmail(req.getEmail().trim());
-    return memberRepo.save(m);
+    m.setEmail(req.getEmail().trim().toLowerCase());
+    Member saved = memberRepo.save(m);
+
+    audit.log(workspaceId, actorEmail, "MEMBER_ADDED",
+        "memberId=" + saved.getId() + ", email=" + saved.getEmail());
+
+    return saved;
   }
 
   @GetMapping("/workspaces/{workspaceId}/members")

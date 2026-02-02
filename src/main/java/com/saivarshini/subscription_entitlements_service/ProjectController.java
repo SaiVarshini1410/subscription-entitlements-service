@@ -12,17 +12,21 @@ public class ProjectController {
   private final ProjectRepository projectRepo;
   private final SubscriptionRepository subRepo;
   private final PlanRepository planRepo;
+  private final AuditService audit;
 
   public ProjectController(ProjectRepository projectRepo,
                            SubscriptionRepository subRepo,
-                           PlanRepository planRepo) {
+                           PlanRepository planRepo,
+                           AuditService audit) {
     this.projectRepo = projectRepo;
     this.subRepo = subRepo;
     this.planRepo = planRepo;
+    this.audit = audit;
   }
 
   @PostMapping("/workspaces/{workspaceId}/projects")
-  public Project createProject(@PathVariable String workspaceId,
+  public Project createProject(@RequestHeader(value = "X-Actor-Email", required = false) String actorEmail,
+                               @PathVariable String workspaceId,
                                @RequestBody ProjectCreateRequest req) {
 
     if (req == null || req.getName() == null || req.getName().trim().isEmpty()) {
@@ -51,7 +55,12 @@ public class ProjectController {
     Project p = new Project();
     p.setWorkspaceId(workspaceId);
     p.setName(req.getName().trim());
-    return projectRepo.save(p);
+    Project saved = projectRepo.save(p);
+
+    audit.log(workspaceId, actorEmail, "PROJECT_CREATED",
+        "projectId=" + saved.getId() + ", name=" + saved.getName());
+
+    return saved;
   }
 
   @GetMapping("/workspaces/{workspaceId}/projects")
